@@ -1,10 +1,10 @@
-package com.discordlevellogger;
+package com.discordlevelnotifications;
 
 
 import lombok.Data;
 
 @Data
-class WebhookBody
+class DiscordWebhookBody
 {
     private String content;
     private Embed embed;

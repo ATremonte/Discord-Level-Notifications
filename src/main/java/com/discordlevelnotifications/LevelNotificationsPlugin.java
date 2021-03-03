@@ -1,4 +1,4 @@
-package com.discordlevellogger;
+package com.discordlevelnotifications;
 
 import com.google.common.base.Strings;
 import com.google.inject.Provides;
@@ -28,19 +28,19 @@ import static net.runelite.http.api.RuneLiteAPI.GSON;
 
 @Slf4j
 @PluginDescriptor(
-	name = "Discord Level Logger"
+	name = "Discord Level Notifications"
 )
-public class LevelLoggerPlugin extends Plugin
+public class LevelNotificationsPlugin extends Plugin
 {
 
 	private static final Pattern LEVEL_UP_PATTERN = Pattern.compile(".*Your ([a-zA-Z]+) (?:level is|are)? now (\\d+)\\.");
-	private boolean shouldTakeScreenshot;
+	private boolean shouldSendMessage;
 
 	@Inject
 	private Client client;
 
 	@Inject
-	private LevelLoggerConfig config;
+	private LevelNotificationsConfig config;
 
 	@Inject
 	private OkHttpClient okHttpClient;
@@ -61,46 +61,42 @@ public class LevelLoggerPlugin extends Plugin
 	@Subscribe
 	public void onGameTick(GameTick event)
 	{
-		if (client.getWidget(WidgetInfo.LEVEL_UP_LEVEL) == null || !shouldTakeScreenshot)
+		if (client.getWidget(WidgetInfo.LEVEL_UP_LEVEL) == null || !shouldSendMessage)
 		{
 			return;
 		}
 
-		shouldTakeScreenshot = false;
+		shouldSendMessage = false;
 
 		String levelUpString = parseLevelUpWidget(WidgetInfo.LEVEL_UP_LEVEL);
 		if (Strings.isNullOrEmpty(levelUpString)) { return; }
 
-		WebhookBody webhookBody = new WebhookBody();
-		webhookBody.setContent(levelUpString);
-		sendWebhook(webhookBody);
+		DiscordWebhookBody discordWebhookBody = new DiscordWebhookBody();
+		discordWebhookBody.setContent(levelUpString);
+		sendWebhook(discordWebhookBody);
 	}
 
 	@Subscribe
 	public void onWidgetLoaded(WidgetLoaded event)
 	{
-		int groupId = event.getGroupId();
-		shouldTakeScreenshot = (config.sendScreenshot() && groupId == LEVEL_UP_GROUP_ID);
+		shouldSendMessage = (event.getGroupId() == LEVEL_UP_GROUP_ID);
 	}
 
 	@Provides
-	LevelLoggerConfig provideConfig(ConfigManager configManager)
+	LevelNotificationsConfig provideConfig(ConfigManager configManager)
 	{
-		return configManager.getConfig(LevelLoggerConfig.class);
+		return configManager.getConfig(LevelNotificationsConfig.class);
 	}
 
-	private void sendWebhook(WebhookBody webhookBody)
+	private void sendWebhook(DiscordWebhookBody discordWebhookBody)
 	{
 		String configUrl = config.webhook();
-		if (Strings.isNullOrEmpty(configUrl))
-		{
-			return;
-		}
+		if (Strings.isNullOrEmpty(configUrl)) { return; }
 
 		HttpUrl url = HttpUrl.parse(configUrl);
 		MultipartBody.Builder requestBodyBuilder = new MultipartBody.Builder()
 				.setType(MultipartBody.FORM)
-				.addFormDataPart("payload_json", GSON.toJson(webhookBody));
+				.addFormDataPart("payload_json", GSON.toJson(discordWebhookBody));
 
 		if (config.sendScreenshot())
 		{
@@ -172,24 +168,14 @@ public class LevelLoggerPlugin extends Plugin
 	private String parseLevelUpWidget(WidgetInfo levelUpLevel)
 	{
 		Widget levelChild = client.getWidget(levelUpLevel);
-		if (levelChild == null)
-		{
-			return null;
-		}
+		if (levelChild == null) { return null; }
 
 		Matcher m = LEVEL_UP_PATTERN.matcher(levelChild.getText());
-		if (!m.matches())
-		{
-			return null;
-		}
+		if (!m.matches()) { return null; }
 
 		String skillName = m.group(1);
 		String skillLevel = m.group(2);
-		int level = Integer.parseInt(skillLevel);
-		if (level < config.minLevel())
-		{
-			return null;
-		}
+		if (Integer.parseInt(skillLevel) < config.minLevel()) { return null; }
 		return client.getLocalPlayer().getName() + " levelled " + skillName + " to " + skillLevel;
 	}
 

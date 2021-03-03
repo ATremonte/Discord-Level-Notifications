@@ -1,23 +1,23 @@
-package com.discordlevellogger;
+package com.discordlevelnotifications;
 
 import net.runelite.client.config.Config;
 import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
 
-@ConfigGroup("discordlevellogger")
-public interface LevelLoggerConfig extends Config
+@ConfigGroup("discordlevelnotifications")
+public interface LevelNotificationsConfig extends Config
 {
 	@ConfigItem(
 			keyName = "webhook",
 			name = "Webhook URL",
-			description = "The Discord Webhook URL to send messages to"
+			description = "The Discord Webhook URL to send messages to."
 	)
 	String webhook();
 
 	@ConfigItem(
 			keyName = "sendScreenshot",
 			name = "Send Screenshot",
-			description = "Include a screenshot when levelling up"
+			description = "Include a screenshot when levelling up."
 	)
 	default boolean sendScreenshot()
 	{
