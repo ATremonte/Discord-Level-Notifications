@@ -79,7 +79,10 @@ public class LevelNotificationsPlugin extends Plugin
 	@Subscribe
 	public void onWidgetLoaded(WidgetLoaded event)
 	{
-		shouldSendMessage = (event.getGroupId() == LEVEL_UP_GROUP_ID);
+		if (event.getGroupId() == LEVEL_UP_GROUP_ID)
+		{
+			shouldSendMessage = true;
+		}
 	}
 
 	@Provides
