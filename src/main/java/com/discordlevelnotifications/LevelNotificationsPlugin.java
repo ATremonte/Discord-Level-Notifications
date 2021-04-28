@@ -4,6 +4,7 @@ import com.google.common.base.Strings;
 import com.google.inject.Provides;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
+import net.runelite.api.Skill;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.WidgetLoaded;
 import net.runelite.api.widgets.Widget;
@@ -20,6 +21,7 @@ import javax.inject.Inject;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.Hashtable;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -35,6 +37,9 @@ public class LevelNotificationsPlugin extends Plugin
 
 	private static final Pattern LEVEL_UP_PATTERN = Pattern.compile(".*Your ([a-zA-Z]+) (?:level is|are)? now (\\d+)\\.");
 	private boolean shouldSendMessage;
+	private Skill levelledSkill;
+
+	private Hashtable<Skill, Integer> currentLevels = new Hashtable<Skill, Integer>();
 
 	@Inject
 	private Client client;
@@ -51,6 +56,11 @@ public class LevelNotificationsPlugin extends Plugin
 	@Override
 	protected void startUp() throws Exception
 	{
+		// Populate table with all known skill values
+		for (Skill skill : Skill.values())
+		{
+			currentLevels.put(skill, client.getRealSkillLevel(skill));
+		}
 	}
 
 	@Override
@@ -61,15 +71,18 @@ public class LevelNotificationsPlugin extends Plugin
 	@Subscribe
 	public void onGameTick(GameTick event)
 	{
-		if (client.getWidget(WidgetInfo.LEVEL_UP_LEVEL) == null || !shouldSendMessage)
+		if (!shouldSendMessage)
 		{
 			return;
 		}
 
 		shouldSendMessage = false;
 
-		String levelUpString = parseLevelUpWidget(WidgetInfo.LEVEL_UP_LEVEL);
-		if (Strings.isNullOrEmpty(levelUpString)) { return; }
+		String levelUpString = client.getUsername()
+				+ " leveled "
+				+ levelledSkill.getName()
+				+ " to "
+				+ currentLevels.get(levelledSkill);
 
 		DiscordWebhookBody discordWebhookBody = new DiscordWebhookBody();
 		discordWebhookBody.setContent(levelUpString);
@@ -77,10 +90,12 @@ public class LevelNotificationsPlugin extends Plugin
 	}
 
 	@Subscribe
-	public void onWidgetLoaded(WidgetLoaded event)
+	public void onStatChanged(Skill skill, int xp, int level, int boostedLevel)
 	{
-		if (event.getGroupId() == LEVEL_UP_GROUP_ID)
+		if (currentLevels.get(skill) != level)
 		{
+			currentLevels.put(skill, level);
+			levelledSkill = skill;
 			shouldSendMessage = true;
 		}
 	}
@@ -167,19 +182,4 @@ public class LevelNotificationsPlugin extends Plugin
 		ImageIO.write(bufferedImage, "png", byteArrayOutputStream);
 		return byteArrayOutputStream.toByteArray();
 	}
-
-	private String parseLevelUpWidget(WidgetInfo levelUpLevel)
-	{
-		Widget levelChild = client.getWidget(levelUpLevel);
-		if (levelChild == null) { return null; }
-
-		Matcher m = LEVEL_UP_PATTERN.matcher(levelChild.getText());
-		if (!m.matches()) { return null; }
-
-		String skillName = m.group(1);
-		String skillLevel = m.group(2);
-		if (Integer.parseInt(skillLevel) < config.minLevel()) { return null; }
-		return client.getLocalPlayer().getName() + " levelled " + skillName + " to " + skillLevel;
-	}
-
 }
