@@ -4,11 +4,6 @@ import com.google.common.base.Strings;
 import com.google.inject.Provides;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
-import net.runelite.api.Skill;
-import net.runelite.api.events.GameTick;
-import net.runelite.api.events.WidgetLoaded;
-import net.runelite.api.widgets.Widget;
-import net.runelite.api.widgets.WidgetInfo;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.plugins.Plugin;
@@ -22,10 +17,7 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Hashtable;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
-import static net.runelite.api.widgets.WidgetID.LEVEL_UP_GROUP_ID;
 import static net.runelite.http.api.RuneLiteAPI.GSON;
 
 @Slf4j
@@ -34,12 +26,7 @@ import static net.runelite.http.api.RuneLiteAPI.GSON;
 )
 public class LevelNotificationsPlugin extends Plugin
 {
-
-	private static final Pattern LEVEL_UP_PATTERN = Pattern.compile(".*Your ([a-zA-Z]+) (?:level is|are)? now (\\d+)\\.");
-	private boolean shouldSendMessage;
-	private Skill levelledSkill;
-
-	private Hashtable<Skill, Integer> currentLevels = new Hashtable<Skill, Integer>();
+	private Hashtable<String, Integer> currentLevels;
 
 	@Inject
 	private Client client;
@@ -56,11 +43,7 @@ public class LevelNotificationsPlugin extends Plugin
 	@Override
 	protected void startUp() throws Exception
 	{
-		// Populate table with all known skill values
-		for (Skill skill : Skill.values())
-		{
-			currentLevels.put(skill, client.getRealSkillLevel(skill));
-		}
+		currentLevels = new Hashtable<String, Integer>();
 	}
 
 	@Override
@@ -68,21 +51,13 @@ public class LevelNotificationsPlugin extends Plugin
 	{
 	}
 
-	@Subscribe
-	public void onGameTick(GameTick event)
+	private void sendMessage(String skillName, int level)
 	{
-		if (!shouldSendMessage)
-		{
-			return;
-		}
-
-		shouldSendMessage = false;
-
-		String levelUpString = client.getUsername()
+		String levelUpString = client.getLocalPlayer().getName()
 				+ " leveled "
-				+ levelledSkill.getName()
+				+ skillName
 				+ " to "
-				+ currentLevels.get(levelledSkill);
+				+ level;
 
 		DiscordWebhookBody discordWebhookBody = new DiscordWebhookBody();
 		discordWebhookBody.setContent(levelUpString);
@@ -90,13 +65,22 @@ public class LevelNotificationsPlugin extends Plugin
 	}
 
 	@Subscribe
-	public void onStatChanged(Skill skill, int xp, int level, int boostedLevel)
+	public void onStatChanged(net.runelite.api.events.StatChanged statChanged)
 	{
-		if (currentLevels.get(skill) != level)
+		String skillName = statChanged.getSkill().getName();
+		int level = statChanged.getLevel();
+
+		// .contains wasn't behaving so I went with == null
+		if (currentLevels.get(skillName) == null)
 		{
-			currentLevels.put(skill, level);
-			levelledSkill = skill;
-			shouldSendMessage = true;
+			currentLevels.put(skillName, level);
+			return;
+		}
+
+		if (currentLevels.get(skillName) != level)
+		{
+			currentLevels.put(skillName, level);
+			sendMessage(skillName, level);
 		}
 	}
 
