@@ -4,6 +4,7 @@ import com.google.common.base.Strings;
 import com.google.inject.Provides;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
+import net.runelite.api.events.GameTick;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.plugins.Plugin;
@@ -16,6 +17,7 @@ import javax.inject.Inject;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Hashtable;
 
 import static net.runelite.http.api.RuneLiteAPI.GSON;
@@ -27,6 +29,9 @@ import static net.runelite.http.api.RuneLiteAPI.GSON;
 public class LevelNotificationsPlugin extends Plugin
 {
 	private Hashtable<String, Integer> currentLevels;
+	private ArrayList<String> leveledSkills;
+	private boolean shouldSendMessage = false;
+	private int ticksWaited = 0;
 
 	@Inject
 	private Client client;
@@ -44,6 +49,7 @@ public class LevelNotificationsPlugin extends Plugin
 	protected void startUp() throws Exception
 	{
 		currentLevels = new Hashtable<String, Integer>();
+		leveledSkills = new ArrayList<String>();
 	}
 
 	@Override
@@ -51,17 +57,23 @@ public class LevelNotificationsPlugin extends Plugin
 	{
 	}
 
-	private void sendMessage(String skillName, int level)
+	@Subscribe
+	public void onGameTick(GameTick event)
 	{
-		String levelUpString = client.getLocalPlayer().getName()
-				+ " leveled "
-				+ skillName
-				+ " to "
-				+ level;
+		if (!shouldSendMessage)
+		{
+			return;
+		}
 
-		DiscordWebhookBody discordWebhookBody = new DiscordWebhookBody();
-		discordWebhookBody.setContent(levelUpString);
-		sendWebhook(discordWebhookBody);
+		if (ticksWaited < 2)
+		{
+			ticksWaited++;
+			return;
+		}
+
+		shouldSendMessage = false;
+		ticksWaited = 0;
+		sendMessage();
 	}
 
 	@Subscribe
@@ -80,7 +92,8 @@ public class LevelNotificationsPlugin extends Plugin
 		if (currentLevels.get(skillName) != level)
 		{
 			currentLevels.put(skillName, level);
-			sendMessage(skillName, level);
+			leveledSkills.add(skillName);
+			shouldSendMessage = true;
 		}
 	}
 
@@ -88,6 +101,38 @@ public class LevelNotificationsPlugin extends Plugin
 	LevelNotificationsConfig provideConfig(ConfigManager configManager)
 	{
 		return configManager.getConfig(LevelNotificationsConfig.class);
+	}
+
+	private void sendMessage()
+	{
+		String levelUpString = client.getLocalPlayer().getName();
+
+		String[] skills = new String[leveledSkills.size()];
+		skills = leveledSkills.toArray(skills);
+		leveledSkills.clear();
+
+		for (int i = 0; i < skills.length; i++)
+		{
+			String skill = skills[i];
+			leveledSkills.remove(skill);
+			if (i > 0)
+			{
+				if (i == skills.length - 1)
+				{
+					levelUpString += " and ";
+				}
+				else
+				{
+					levelUpString += ", ";
+				}
+			}
+
+			levelUpString += " leveled " + skill + " to " + currentLevels.get(skill);
+		}
+
+		DiscordWebhookBody discordWebhookBody = new DiscordWebhookBody();
+		discordWebhookBody.setContent(levelUpString);
+		sendWebhook(discordWebhookBody);
 	}
 
 	private void sendWebhook(DiscordWebhookBody discordWebhookBody)
