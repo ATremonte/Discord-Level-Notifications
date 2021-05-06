@@ -92,8 +92,12 @@ public class LevelNotificationsPlugin extends Plugin
 		if (currentLevels.get(skillName) != level)
 		{
 			currentLevels.put(skillName, level);
-			leveledSkills.add(skillName);
-			shouldSendMessage = true;
+
+			if (level >= config.minLevel())
+			{
+				leveledSkills.add(skillName);
+				shouldSendMessage = true;
+			}
 		}
 	}
 
