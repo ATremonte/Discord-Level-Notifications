@@ -112,11 +112,19 @@ public class LevelNotificationsPlugin extends Plugin
 		{
 			currentLevels.put(skillName, level);
 
-			if (level >= config.minLevel())
+			if (level >= config.minLevel() && checkPeriodLevel(level))
 			{
 				leveledSkills.add(skillName);
 				shouldSendMessage = true;
 			}
+		}
+	}
+
+	private boolean checkPeriodLevel(int level) {
+		if (config.periodLevel() == 0 || level == 99) {
+			return true;
+		} else {
+			return level % config.periodLevel() == 0;
 		}
 	}
 
