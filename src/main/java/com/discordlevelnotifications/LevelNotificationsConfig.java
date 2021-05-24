@@ -36,8 +36,8 @@ public interface LevelNotificationsConfig extends Config
 
 	@ConfigItem(
 			keyName = "periodLevel",
-			name = "send every n levels",
-			description = "Only levels that are a multiple of this value are sent. If 0, send every level"
+			name = "Send every n levels",
+			description = "Only levels that are a multiple of this value are sent. 99s are always sent"
 	)
-	default int periodLevel() {return 0;}
+	default int periodLevel() {return 1;}
 }

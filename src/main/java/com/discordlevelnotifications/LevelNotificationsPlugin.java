@@ -121,11 +121,10 @@ public class LevelNotificationsPlugin extends Plugin
 	}
 
 	private boolean checkPeriodLevel(int level) {
-		if (config.periodLevel() == 0 || level == 99) {
+		if (level == 99) {
 			return true;
-		} else {
-			return level % config.periodLevel() == 0;
 		}
+		return level % config.periodLevel() == 0;
 	}
 
 	@Provides
