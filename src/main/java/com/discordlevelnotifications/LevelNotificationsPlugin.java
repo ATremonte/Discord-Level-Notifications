@@ -48,6 +48,12 @@ public class LevelNotificationsPlugin extends Plugin
 	@Inject
 	private DrawManager drawManager;
 
+	@Provides
+	LevelNotificationsConfig provideConfig(ConfigManager configManager)
+	{
+		return configManager.getConfig(LevelNotificationsConfig.class);
+	}
+
 	@Override
 	protected void startUp() throws Exception
 	{
@@ -112,7 +118,7 @@ public class LevelNotificationsPlugin extends Plugin
 		{
 			currentLevels.put(skillName, level);
 
-			if (level >= config.minLevel() && checkPeriodLevel(level))
+			if (shouldSendForThisLevel(level))
 			{
 				leveledSkills.add(skillName);
 				shouldSendMessage = true;
@@ -120,18 +126,17 @@ public class LevelNotificationsPlugin extends Plugin
 		}
 	}
 
-	private boolean checkPeriodLevel(int level) {
-		if (config.periodLevel() == 0 || level == 99) {
-			return true;
-		} else {
-			return level % config.periodLevel() == 0;
-		}
+	private boolean shouldSendForThisLevel(int level)
+	{
+		return level >= config.minLevel()
+				&& levelMeetsIntervalRequirement(level);
 	}
 
-	@Provides
-	LevelNotificationsConfig provideConfig(ConfigManager configManager)
+	private boolean levelMeetsIntervalRequirement(int level)
 	{
-		return configManager.getConfig(LevelNotificationsConfig.class);
+		return config.levelInterval() <= 1
+				|| level == 99
+				|| level % config.levelInterval() == 0;
 	}
 
 	private void sendMessage()

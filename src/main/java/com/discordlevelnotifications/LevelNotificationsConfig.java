@@ -17,7 +17,7 @@ public interface LevelNotificationsConfig extends Config
 	@ConfigItem(
 			keyName = "sendScreenshot",
 			name = "Send Screenshot",
-			description = "Include a screenshot when levelling up."
+			description = "Include a screenshot when leveling up."
 	)
 	default boolean sendScreenshot()
 	{
@@ -35,9 +35,9 @@ public interface LevelNotificationsConfig extends Config
 	}
 
 	@ConfigItem(
-			keyName = "periodLevel",
-			name = "send every n levels",
-			description = "Only levels that are a multiple of this value are sent. If 0, send every level"
+			keyName = "levelInterval",
+			name = "Send every X levels",
+			description = "Only levels that are a multiple of this value are sent. Level 99 will always be sent regardless of this value."
 	)
-	default int periodLevel() {return 0;}
+	default int levelInterval() { return 1; }
 }
