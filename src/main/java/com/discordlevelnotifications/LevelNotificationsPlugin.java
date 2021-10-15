@@ -120,7 +120,7 @@ public class LevelNotificationsPlugin extends Plugin
 			currentLevels.put(skillName, newLevel);
 
 			// Certain activities can multilevel, check if any of the levels are valid for the message.
-			for (int level = previousLevel; level <= newLevel; level++)
+			for (int level = previousLevel + 1; level <= newLevel; level++)
 			{
 				if(shouldSendForThisLevel(level))
 				{
