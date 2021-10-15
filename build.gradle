@@ -10,7 +10,7 @@ repositories {
 	mavenCentral()
 }
 
-def runeLiteVersion = '1.7.12'
+def runeLiteVersion = '1.7.26'
 
 dependencies {
 	compileOnly group: 'net.runelite', name:'client', version: runeLiteVersion
@@ -22,8 +22,8 @@ dependencies {
 	testImplementation group: 'net.runelite', name:'client', version: runeLiteVersion
 }
 
-group = 'com.example'
-version = '1.2.2'
+group = 'com.discordlevelnotifications'
+version = '1.2.3'
 sourceCompatibility = '1.8'
 
 tasks.withType(JavaCompile) {
